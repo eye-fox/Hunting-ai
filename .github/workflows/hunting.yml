@@ -22,4 +22,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: laporan-kerentanan
-          path: laporan_kerentanan.md
+          path: |
+               laporan_kerentanan.md
+               **/laporan_kerentanan.md
+               */**/laporan_kerentanan.md
+          if-no-files-found: warn
