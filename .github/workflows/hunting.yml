@@ -1,0 +1,19 @@
+name: Hunting
+
+on:
+  push:
+    paths:
+      - 'tests.sh'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Make script executable
+        run: chmod +x mulai.sh
+
+      - name: Run tests
+        run: ./mulai.sh
