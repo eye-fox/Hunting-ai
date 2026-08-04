@@ -25,5 +25,5 @@ jobs:
           path: |
                laporan_kerentanan.md
                **/laporan_kerentanan.md
-               */**/laporan_kerentanan.md
+               /**/laporan_kerentanan.md
           if-no-files-found: warn
