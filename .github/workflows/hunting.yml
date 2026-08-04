@@ -3,7 +3,7 @@ name: Hunting
 on:
   push:
     paths:
-      - 'tests.sh'
+      - 'mulai.sh'
 
 jobs:
   test:
