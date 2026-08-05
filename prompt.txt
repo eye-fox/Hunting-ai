@@ -1,1 +1,1 @@
-siapa kamu? dan apa keahlian kamu??
+load skill browser-local lalu coba login ke akun shopify saya, kredensial nya: Email: pentester_indo@wearehackerone.com pass: Y0dWdWRHVno , halaman login ada di https://accounts.shopify.com/lookup 
