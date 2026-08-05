@@ -28,14 +28,50 @@ ATURAN EMAS (tidak boleh dilanggar):
 - Dilarang menyerah sebelum minimal 3 hipotesis berbeda diuji dengan test
   yang benar-benar dieksekusi.
 
-FASE 0 — SETUP LINGKUNGAN (WAJIB)
+FASE 0 — SETUP LINGKUNGAN & STRUKTUR DIREKTORI PROYEK (WAJIB)
 Jalankan perintah ini satu per satu, PASTIKAN sukses sebelum lanjut:
 
-1. Clone repo (repo publik, ini riset keamanan resmi untuk bug bounty):
+0. BUAT DIREKTORI PROYEK HUNTING (semua kerja mulai dari sini — dari git
+   clone sampai laporan akhir, SEMUANYA berada di dalam satu direktori):
+
+   mkdir -p proyek && cd proyek
+
+   Struktur final yang WAJIB diikuti:
+   proyek/
+   ├── java-tron/                  # hasil git clone (Fase 0.1)
+   ├── tips/                       # clone tronprotocol/tips (referensi spek)
+   ├── logs/                       # log kerja per fase/area (koordinasi antar subagent)
+   │   ├── phase1-architecture.md  # peta modul, pipeline, trust boundary
+   │   ├── phase2-bypass-matrix.md # matriks check vs bypass
+   │   ├── area-3A-reward.md       # log area reward/vote
+   │   ├── area-3B-stake.md        # log area stake 2.0
+   │   ├── area-3C-energy.md       # log area energy/fee
+   │   └── area-3D-misc.md         # log area permission/consensus/p2p
+   ├── hypotheses/                 # SATU file per hipotesis (dibuat subagent)
+   │   ├── H01-double-withdraw.md
+   │   ├── H02-phase1-vs-phase2.md
+   │   └── ... (H01-H24+)
+   ├── proofs/                     # reproducer + output test
+   │   ├── H01-WithdrawRewardRace.java
+   │   └── H01-output.txt
+   ├── reports/                    # laporan akhir per temuan lolos gate
+   │   └── VULN-001-<nama>.md
+   ├── hunt-log.md                 # LOG GLOBAL: timestamp, siapa (subagent
+   │                               # mana), apa yang dikerjakan, hasil
+   └── findings.md                 # daftar semua hipotesis + status
+
+1. Clone repo java-tron (repo publik, ini riset keamanan resmi untuk bug bounty):
    git clone https://github.com/tronprotocol/java-tron.git
    cd java-tron
 
-2. Tinjau riwayat & kondisi awal:
+2. Clone repo TIPS (spek resmi — WAJIB, dipakai terus di eligibility gate):
+   cd proyek
+   git clone https://github.com/tronprotocol/tips.git
+   cd tips
+   git log --oneline -5
+   cd proyek/java-tron
+
+3. Tinjau riwayat & kondisi awal:
    git log --oneline -20
    git status
    git branch -a
@@ -43,24 +79,25 @@ Jalankan perintah ini satu per satu, PASTIKAN sukses sebelum lanjut:
     diperbaiki di commit terbaru → jika sudah, cari tahu versi mana yang
     terpengaruh untuk laporan.)
 
-3. Baca dokumentasi build:
+4. Baca dokumentasi build:
    cat README.md | head -100
    Cari section "Build" / "Run" / "Test".
 
-4. Build & test baseline (bisa makan waktu lama — gunakan timeout besar):
+5. Build & test baseline (bisa makan waktu lama — gunakan timeout besar):
    ./gradlew build -x test -x checkstyleMain -x spotlessCheck
    Jika gagal karena lingkungan (mis. butuh JDK 17+), pasang JDK yang sesuai
    (apt install openjdk-17-jdk / sdk install java 17.0.x) lalu ulangi.
 
-5. Pastikan baseline test JALAN (minimal satu modul, mis. actuator):
+6. Pastikan baseline test JALAN (minimal satu modul, mis. actuator):
    ./gradlew :actuator:test --tests "*WithdrawBalanceActuatorTest*"
    Tujuan: memastikan infrastruktur test berfungsi sebelum kamu menulis
    reproducer sendiri.
 
-6. Siapkan LOG FILE di /home/kali/tron/hunt-log.md — tulis timestamp + hasil
-   setiap langkah. Ini bukti kerja keras dan membantu kamu tidak mengulang.
+7. Siapkan LOG GLOBAL di proyek/hunt-log.md — tulis timestamp
+   + nama subagent + hasil setiap langkah. Ini bukti kerja keras dan
+   koordinasi antar subagent.
 
-7. Buat file /home/kali/tron/findings.md — semua hipotesis, hasil uji,
+8. Buat file proyek/findings.md — semua hipotesis, hasil uji,
    status (REJECTED / BY-DESIGN / ELIGIBLE-CANDIDATE).
 
 FASE 1 — PEMAHAMAN SISTEM (WAJIB SEBELUM MENCARI BUG)
@@ -170,8 +207,70 @@ Pola bypass klasik yang WAJIB dicoba di semua titik:
   k. P2P/block: witness scheduling (slots), block timestamp validity,
      duplicate block, verifikasi proof-of-stake.
 
+FASE 2.5 — ORKESTRASI SUBAGENT PARALEL (WAJIB — JANGAN KERJAKAN SENDIRI SAJA)
+
+Kamu (AI utama) adalah KOORDINATOR. Gunakan subagent yang tersedia untuk
+memparalelkan pekerjaan. Jangan mengerjakan semua fase seorang diri.
+
+SUBAGENT YANG TERSEDIA & PERANNYA:
+  - explore        : pencarian cepat pola/kode (mis. "cari semua pemanggilan
+                     VoteRewardUtil.withdrawReward", "cari semua updateBalance")
+                     → cepat, hemat konteks. Pakai untuk tahap awal tiap area.
+  - general        : tugas multi-langkah mandiri (analisis statis satu file
+                     lengkap + menulis hipotesis + menyiapkan draft test).
+  - security-auditor : audit keamanan kode mendalam per file/area (review
+                     ketat dengan lensa kerentanan).
+  - Sub Flow Hunter  : analisis alur sistem (mindset-first: data flow, state,
+                     trust boundary, asumsi developer) — sangat cocok untuk
+                     mencari bypass yang "merugikan user lain".
+
+ATURAN DELEGASI (WAJIB):
+1. Jangan pernah mendelegasikan tanpa konteks lengkap. Setiap subagent
+   DIBERI paket kerja yang berisi:
+   (a) file/area target + line range,
+   (b) hipotesis yang harus diuji (salin dari Fase 3),
+   (c) ringkasan Eligibility Gate (Fase 6) + aturan "by design TIP ≠ bug",
+   (d) lokasi penulisan output: hypotheses/HXX-*.md, proofs/, logs/area-*.md,
+   (e) format laporan balasan: [HIPO] → [STATUS: ANALYZED/TESTED/BY-DESIGN/
+       ELIGIBLE-CANDIDATE] → [bukti/test] → [kesimpulan].
+2. POLA PARALEL (mulai setelah Fase 1 selesai oleh koordinator):
+   - Wave 1 (3 subagent paralel): explore di area 3A (reward), 3B (stake),
+     3C (energy) → masing-masing mengembalikan peta kode + kandidat titik
+     check. Simpan hasil ke logs/area-*.md.
+   - Wave 2 (3 subagent paralel): general/security-auditor/Sub Flow Hunter
+     di 3 area yang sama → analisis statis + hipotesis H01-H24 (tulis ke
+     hypotheses/). JANGAN jalankan >3 subagent berat bersamaan agar tidak
+     tabrakan di workspace git dan gradle.
+   - Wave 3 (paralel, 2-3 subagent): masing-masing MENULIS + MENJALANKAN
+     test reproducer di proofs/ untuk hipotesisnya sendiri. Aturan: test
+     memakai kelas/package UNIK per area (mis. org.tron.hunt.reward.*,
+     org.tron.hunt.stake.*) supaya tidak konflik file. Menjalankan gradle
+     HANYA oleh SATU subagent pada satu waktu (serialisasi via lock file:
+     proofs/.gradle-lock — cek & buat sebelum jalankan, hapus setelah).
+   - Wave 4 (2 subagent): VERIFIKASI SILANG — temuan ELIGIBLE-CANDIDATE dari
+     satu subagent DITINJAU subagent lain yang berbeda (independent review).
+     Koordinator tidak menerima temuan tanpa verifikasi silang.
+3. KOORDINATOR TETAP MEMEGANG (tidak boleh didelegasikan):
+   - Eligibility Gate final (Fase 6),
+   - cek duplikasi (Fase 5) & status patch di master,
+   - konsolidasi findings.md dan laporan akhir (reports/VULN-XX.md),
+   - keputusan REJECTED vs BY-DESIGN vs lanjut.
+4. Koordinasi via FILE (shared state), bukan chat:
+   - hunt-log.md  : garis waktu kerja semua subagent,
+   - hypotheses/  : satu file per hipotesis (subagent hanya menyentuh
+                    filenya sendiri),
+   - findings.md  : tabel master status,
+   - proofs/.gradle-lock : pengunci eksekusi gradle.
+5. Jika sebuah area menemukan kandidat kuat, koordinator BISA mengirim 1
+   subagent tambahan ke area lain (mis. serangan paralel di 3D permission)
+   — prioritas tetap: 3A > 3B > 3C.
+6. Subagent tidak boleh mengedit file milik area lain, tidak boleh mengubah
+   kode sumber java-tron (kecuali menambah file test di folder test),
+   tidak boleh push/commit ke repo.
+
 FASE 3 — DAERAH HUNTING PRIORITAS (URUTAN TERHARGA → MURAH)
-Kerjakan berurutan. Untuk SETIAP daerah, luangkan waktu 30-90 menit analisis
+Kerjakan berurutan (paralel antar-area dengan subagent sesuai Fase 2.5).
+Untuk SETIAP daerah, luangkan waktu 30-90 menit analisis
 statis + tulis hipotesis + uji dengan test. Jangan skip.
 
 === 3A. SISTEM REWARD & VOTE (NILAI TERTINGGI) ===
@@ -390,7 +489,7 @@ FASE 7 — ATURAN ITERASI "TIDAK BOLEH BERHENTI"
    Tinjau ulang semua perbedaan TVM vs non-TVM dengan tabel lengkap.
 5. Target akhir: minimal SATU temuan lolos Eligibility Gate, ditulis lengkap.
 
-FASE 8 — FORMAT LAPORAN AKHIR
+FASE 8 — FORMAT LAPORAN AKHIR (findings.md + laporkan ke bounty@tron.network)
 Setiap temuan yang lolos gate ditulis dengan format:
 
   TITLE       : satu kalimat padat (mis. "Duplicate reward withdrawal via
