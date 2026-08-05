@@ -22,5 +22,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: hasil_hunting
-          path: project/*.md
+          path: project/**.md
           if-no-files-found: error
