@@ -12,6 +12,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Install Python dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3 python3-pip chromium-browser
+          pip3 install websocket-client
+
       - name: Make script executable
         run: chmod +x mulai.sh
 
