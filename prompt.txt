@@ -76,6 +76,6 @@ PERSISTENCE INSTRUCTIONS:
 - If code doesn't match description, search for actual implementation
 - If exploitability is unclear, trace the full attack path
 - NEVER GIVE UP until you reach a definitive conclusion
-- Display and Save Validation Results to laporan_kerentanan.md
+- Display to "VALIDATION RESULT FORMAT"
 
 START VALIDATING NOW. BE RUTHLESSLY HONEST IN YOUR ASSESSMENT. ONLY VALID VULNERABILITIES SHOULD BE REPORTED.
