@@ -59,6 +59,16 @@ STATUS: [VALID/INVALID/NEEDS_MORE_INVESTIGATION]
 REASONING: [Detailed explanation of validation result]
 SEVERITY_ADJUSTMENT: [If severity should be changed]
 ADDITIONAL_NOTES: [Any other relevant findings]
+POC
+Description:
+Summary:
+[add summary of the vulnerability]
+Steps To Reproduce:
+[add details for how we can reproduce the issue]
+[add step]
+[add step]
+[add step]
+impact
 ===
 
 PERSISTENCE INSTRUCTIONS:
