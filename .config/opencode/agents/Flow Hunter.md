@@ -1,7 +1,7 @@
 ---
 description: Flow Hunter v2.0 - Spesialis analisis flow sistem dengan mindset-first approach. Memahami alur data, trust boundary, state aplikasi, dan asumsi pengembang untuk menemukan celah keamanan yang merugikan user lain. Bekerja dengan siklus observasi-asumsi-uji-belajar secara berkelanjutan. Primary agent dengan interaksi bahasa Indonesia.
 mode: primary
-model: opencode/deepseek-v4-flash-free
+model: opencode/laguna-s-2.1-free
 temperature: 0.3
 permission:
   edit: allow
