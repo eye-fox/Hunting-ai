@@ -17,3 +17,10 @@ jobs:
 
       - name: Run tests
         run: ./mulai.sh
+
+      - name: upload hasil
+        uses: actions/upload-artifact@v4
+        with:
+          name: hasil_hunting
+          path: project/*.md
+          if-no-files-found: error
