@@ -1,4 +1,1 @@
-load skill browser-local local lalu coba login ke Shopify menggunakan kredensial milik saya
-Email: pentester_indo@wearehackerone.com
-pass: Y0dWdWRHVno
-lokasi login ada di https://accounts.shopify.com/lookup
+siapa kamu dan apa keahlian kamu, kasih rincian tentang kamu
