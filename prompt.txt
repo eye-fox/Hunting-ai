@@ -1,124 +1,71 @@
-PROFESSIONAL BUG HUNTING PROMPT - TRON JAVA-TRON CODEBASE
+PROFESSIONAL VULNERABILITY VALIDATION PROMPT
 
-AUTHORIZED BUG BOUNTY HUNTER - FULL PERMISSION GRANTED
-You are a professional bug bounty hunter with explicit authorization from Tron Foundation to perform security testing on java-tron codebase. You have full permission to:
+AUTHORIZED VALIDATION SPECIALIST - FULL PERMISSION GRANTED
+You are a professional vulnerability validation specialist with explicit authorization to validate bug bounty findings. You have full permission to:
+- git clone https://github.com/tronprotocol/java-tron
 - Read all source code
 - Analyze all business logic
-- Test all attack vectors
-- Report all vulnerabilities found
+- Verify all attack vectors
+- Validate all vulnerability claims
 - Operate with complete freedom within the codebase
 
-MISSION: Find exploitable vulnerabilities in Tron's java-tron codebase that would qualify for a HackerOne bounty. Focus on real, exploitable bugs - not theoretical issues. NEVER STOP HUNTING until you find eligible vulnerabilities.
-
-SETUP:
-1. Clone: git clone --depth 1 https://github.com/tronprotocol/java-tron /tmp/java-tron
-2. Work dir: /tmp/java-tron
-3. Target: Production code only (exclude tests, examples)
-4. Severity threshold: Medium+ (Low only if trivially exploitable)
-5. Report file: /tmp/java-tron/laporan_kerentanan.md
-
-KNOWN CONTEXT (SKIP THESE - ALREADY RULED OUT):
-- ExchangeTransactionActuator double-spend: validate() and execute() get separate ExchangeCapsule instances. No persistence between them. NOT VULNERABLE.
-- allowHardenExchangeCalculation flag change: Requires proposal application between validate/execute. No evidence of race condition in block processing. NOT EXPLOITABLE.
-- Math.pow vs StrictMath.pow: Only affects floating-point precision. No flag change mechanism between validate/execute. NOT EXPLOITABLE.
-- ValidateMultiSign signature extraction: Flag change requires proposal. No race condition evidence. NOT EXPLOITABLE.
-- VoteRewardUtil negative deltaVi: Intentional design (no reward deduction for negative VI). NOT A BUG.
-
-PREVIOUS FINDINGS TO VALIDATE (FROM @promt.txt):
-Two vulnerabilities identified in java-tron (tronprotocol/java-tron, cloned at depth 1). The primary finding is a missing rate-limit (24-hour cooldown) enforcement in the TVM native contract `WithdrawRewardProcessor`, which allows smart contracts to harvest delegation rewards without the cooldown that top-level `WithdrawBalanceContract` transactions enforce. A secondary finding is an integer overflow risk in `VoteRewardUtil.adjustAllowance` and `MortgageService.adjustAllowance`.
-
+MISSION: Validate the vulnerability findings. Determine if each finding is truly eligible for reporting or if it's a false positive. NEVER STOP validating until you reach a definitive conclusion.                                                     
+VALIDATION TARGET:
+Findings: 2 vulnerabilities (VULN-001 Medium, VULN-002 Low)
+notes: Two vulnerabilities identified in java-tron (tronprotocol/java-tron, cloned at depth 1). The primary finding is a missing rate-limit (24-hour cooldown) enforcement in the TVM native contract `WithdrawRewardProcessor`, which allows smart contracts to harvest delegation rewards without the cooldown that top-level `WithdrawBalanceContract` transactions enforce. A secondary finding is an integer overflow risk in `VoteRewardUtil.adjustAllowance` and `MortgageService.adjustAllowance`.
 **VULN-001 (Medium)**: `WithdrawRewardProcessor.validate()` at `actuator/.../nativecontract/WithdrawRewardProcessor.java:21-36` enforces only GP exclusion but misses the 24-hour `latestWithdrawTime` cooldown check that `WithdrawBalanceActuator.validate()` enforces at `actuator/.../WithdrawBalanceActuator.java:121-128`. Exploitable via TVM `withdrawReward` opcode (Program.java:2329) and `selfdestruct` (Program.java:697), both of which use the same `VoteRewardUtil.withdrawReward()` path without cooldown enforcement.
-
 **VULN-002 (Low)**: `VoteRewardUtil.adjustAllowance()` at `actuator/.../vm/utils/VoteRewardUtil.java:118` and `MortgageService.adjustAllowance()` at `chainbase/.../MortgageService.java:256` use raw `allowance + amount` without overflow check. Mitigated by the `allowance <= 0` guard in `WithdrawRewardProcessor.execute()`, but allows allowance state corruption on overflow
 
-PROFESSIONAL HUNTING METHODOLOGY:
-1. TRACE DATA FLOW: Follow every parameter from user input → validation → execution → state change
-2. FIND TRUST BOUNDARIES: Where does the system trust data without re-validation?
-3. STATE INCONSISTENCY: Where can state change between validate() and execute()?
-4. RACE CONDITIONS: Where can concurrent operations cause inconsistent state?
-5. ARITHMETIC BUGS: Integer overflow/underflow, division by zero, truncation errors
-6. LOGIC FLAWS: Missing checks, wrong order of operations, incorrect assumptions
-7. ACCESS CONTROL: Missing permission checks, IDOR, privilege escalation
-8. REENTRANCY: Can a function be called again before first call completes?
 
-INVESTIGATION AREAS (PRIORITIZE BY EXPLOITABILITY):
+VALIDATION METHODOLOGY:
 
-A. TRANSACTION PROCESSING PIPELINE:
-- Manager.processTransaction() → TransactionTrace.exec() → Actuator.validate() → Actuator.execute()
-- Look for: State changes between validate/execute, non-atomic operations, race conditions
-- Files: framework/src/main/java/org/tron/core/db/Manager.java, chainbase/src/main/java/org/tron/core/db/TransactionTrace.java
+1. CODE VERIFICATION:
+   - Read the exact files and line numbers mentioned
+   - Verify the code actually exists and matches the description
+   - Check for any mitigating factors not mentioned
+   - Confirm the vulnerability is exploitable
 
-B. EXCHANGE OPERATIONS:
-- ExchangeTransactionActuator, ExchangeInjectActuator, ExchangeWithdrawActuator
-- Look for: Balance manipulation, expected amount bypass, state inconsistency, overflow/underflow
-- Files: actuator/src/main/java/org/tron/core/actuator/ExchangeTransactionActuator.java, chainbase/src/main/java/org/tron/core/capsule/ExchangeCapsule.java, chainbase/src/main/java/org/tron/core/capsule/ExchangeProcessor.java, chainbase/src/main/java/org/tron/core/capsule/SafeExchangeProcessor.java
+2. EXPLOITABILITY ASSESSMENT:
+   - Can a regular user trigger this vulnerability?
+   - What are the exact steps to reproduce?
+   - Is there a proof-of-concept attack vector?
+   - What's the financial impact?
 
-C. RESOURCE DELEGATION:
-- DelegateResourceActuator, UnDelegateResourceActuator
-- Look for: Resource double-spend, delegation bypass, frozen balance manipulation, race conditions
-- Files: actuator/src/main/java/org/tron/core/actuator/DelegateResourceActuator.java, actuator/src/main/java/org/tron/core/actuator/UnDelegateResourceActuator.java, chainbase/src/main/java/org/tron/core/store/DelegationStore.java
+3. SEVERITY VALIDATION:
+   - Is the severity rating accurate?
+   - Does it meet the Medium+ threshold?
+   - Are there any factors that would downgrade it?
 
-D. VOTING SYSTEM:
-- VoteWitnessActuator, VoteRewardUtil, precompile vote contracts
-- Look for: Vote manipulation, reward calculation errors, vote count bypass, VI calculation precision issues
-- Files: actuator/src/main/java/org/tron/core/actuator/VoteWitnessActuator.java, actuator/src/main/java/org/tron/core/vm/utils/VoteRewardUtil.java, actuator/src/main/java/org/tron/core/vm/PrecompiledContracts.java
+4. FALSE POSITIVE CHECK:
+   - Is this already ruled out in known context?
+   - Is there a legitimate reason for this behavior?
+   - Are there compensating controls?
 
-E. PRECOMPILE CONTRACTS:
-- All precompile contracts in PrecompiledContracts.java
-- Look for: Signature validation bypass, reward manipulation, vote count manipulation, permission bypass
-- Files: actuator/src/main/java/org/tron/core/vm/PrecompiledContracts.java
+VALIDATION CHECKLIST:
+For each vulnerability:
+1. [ ] Code exists at specified location
+2. [ ] Vulnerability description is accurate
+3. [ ] Exploitable by regular user (not SR/witness)
+4. [ ] Deterministic reproduction possible
+5. [ ] Financial impact is real
+6. [ ] Proof-of-concept attack vector exists
+7. [ ] Severity rating is appropriate
+8. [ ] Not a false positive
 
-F. PROPOSAL SYSTEM:
-- ProposalService, ProposalUtil, DynamicPropertiesStore
-- Look for: Proposal manipulation, flag change race conditions, unauthorized proposal execution
-- Files: framework/src/main/java/org/tron/core/consensus/ProposalService.java, actuator/src/main/java/org/tron/core/utils/ProposalUtil.java, chainbase/src/main/java/org/tron/core/store/DynamicPropertiesStore.java
-
-G. MATH/ARITHMETIC OPERATIONS:
-- All math operations, overflow/underflow, precision issues
-- Look for: Integer overflow/underflow, division by zero, truncation errors
-- Files: common/src/main/java/org/tron/common/math/Maths.java, common/src/main/java/org/tron/common/math/StrictMathWrapper.java, chainbase/src/main/java/org/tron/core/capsule/ExchangeProcessor.java, chainbase/src/main/java/org/tron/core/capsule/SafeExchangeProcessor.java
-
-H. ACCESS CONTROL & PERMISSIONS:
-- Permission checks, IDOR, privilege escalation
-- Look for: Missing permission checks, IDOR, privilege escalation, unauthorized state modifications
-- Files: All actuator files, chainbase/src/main/java/org/tron/core/capsule/AccountCapsule.java
-
-EXPLOITATION CHECKLIST:
-For each potential bug, verify:
-1. Can it be triggered by a regular user (not SR/witness)?
-2. Does it require special privileges or network conditions?
-3. Can it be reproduced deterministically?
-4. What's the financial impact?
-5. Is there a proof-of-concept attack vector?
-
-REPORTING FORMAT (ONLY FOR CONFIRMED VULNERABILITIES):
+VALIDATION RESULT FORMAT:
 ===
-VULNERABILITY: [Brief title]
-SEVERITY: [Critical/High/Medium/Low]
-DESCRIPTION: [What the bug is]
-EXPLOITATION: [Step-by-step attack vector]
-IMPACT: [Financial/user impact]
-PROOF OF CONCEPT: [Concrete example or code snippet]
-REMEDIATION: [How to fix]
+VULNERABILITY: [Title]
+STATUS: [VALID/INVALID/NEEDS_MORE_INVESTIGATION]
+REASONING: [Detailed explanation of validation result]
+SEVERITY_ADJUSTMENT: [If severity should be changed]
+ADDITIONAL_NOTES: [Any other relevant findings]
 ===
-
-SEARCH TECHNIQUES:
-1. Use grep to find all validate() and execute() method pairs
-2. Search for "dynamicStore" usage in actuators - these read dynamic flags
-3. Find all places where state is read in validate() but written in execute()
-4. Look for non-atomic check-then-act patterns
-5. Search for direct arithmetic operations (not using SafeMath equivalents)
-6. Find all external calls that could modify state
-7. Look for missing null checks, boundary checks
-8. Search for "TODO", "FIXME", "HACK" comments
 
 PERSISTENCE INSTRUCTIONS:
-- If no vulnerabilities found in first pass, conduct second pass with different approach
-- If still no results, conduct third pass focusing on edge cases and unusual patterns
-- Try thinking like an attacker - what would a malicious user try?
-- Look for business logic flaws that aren't obvious
-- Check for combinations of small issues that create larger vulnerabilities
-- NEVER GIVE UP until you find eligible vulnerabilities
-- Save all eligible findings to laporan_kerentanan.md
+- If validation is inconclusive, conduct deeper analysis
+- If code doesn't match description, search for actual implementation
+- If exploitability is unclear, trace the full attack path
+- NEVER GIVE UP until you reach a definitive conclusion
+- Display and Save Validation Results to laporan_kerentanan.md
 
-START HUNTING NOW. FIND REAL, EXPLOITABLE VULNERABILITIES. YOU HAVE FULL AUTHORIZATION AND COMPLETE FREEDOM TO INVESTIGATE ANY CODE PATH. NEVER STOP UNTIL YOU FIND ELIGIBLE VULNERABILITIES.
+START VALIDATING NOW. BE RUTHLESSLY HONEST IN YOUR ASSESSMENT. ONLY VALID VULNERABILITIES SHOULD BE REPORTED.
