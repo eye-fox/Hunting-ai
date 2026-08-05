@@ -1,1 +1,1 @@
-load skill browser-local lalu coba login ke akun shopify saya, kredensial nya: Email: pentester_indo@wearehackerone.com pass: Y0dWdWRHVno , halaman login ada di https://accounts.shopify.com/lookup 
+saya mau memasang agent dan skill, dimana saya harus meletakkan agent custom dan skill custom
