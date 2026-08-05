@@ -11,4 +11,4 @@ mkdir -p ~/.local/share/opencode
 PROMPT=$(cat prompt.txt)
 
 # Jalankan OpenCode dengan isi prompt.txt
-~/.opencode/bin/opencode run "$PROMPT" -m opencode/laguna-s-2.1-free --auto
+~/.opencode/bin/opencode run "$PROMPT" -agent 'Flow Hunter' -m opencode/laguna-s-2.1-free --auto
