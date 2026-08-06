@@ -1,1 +1,1 @@
-modifikasi tools pada skill browser-local dengan menambahkan uc undectected selenium biar bisa bypass, coba modifikasi terus menerus Sampai tidak lagi memicu cloudflare pada https://accounts.shopify.com/lookup, jika berhasil cetak tools baru dalam (tambahkan akhiran .MD pada nama file browser-local baru meskipun itu python)
+coba masuk ke halaman login shopify menggunakan tools dari https://github.com/seleniumbase/SeleniumBase secara headless, Halaman loginnya itu https://accounts.shopify.com/lookup
