@@ -1,0 +1,45 @@
+name: Run Custom Command
+
+on:
+  workflow_dispatch:
+    inputs:
+      command:
+        description: 'Perintah terminal yang akan dijalankan (contoh: curl -O https://example.com/file.zip)'
+        required: true
+        type: string
+      location:
+        description: 'Lokasi/direktori dimana perintah dijalankan (contoh: ./data/ atau ./)'
+        required: true
+        default: './'
+        type: string
+
+jobs:
+  execute-command:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Buat direktori jika belum ada
+        run: mkdir -p ${{ github.workspace }}/${{ inputs.location }}
+        continue-on-error: true
+
+      - name: Jalankan perintah
+        run: |
+          cd ${{ github.workspace }}/${{ inputs.location }}
+          echo "📂 Berada di: $(pwd)"
+          echo "⚡ Menjalankan: ${{ inputs.command }}"
+          echo "-----------------------------------"
+          eval ${{ inputs.command }}
+        shell: bash
+
+      - name: Commit & Push perubahan
+        run: |
+          git config --global user.name "${{ github.actor }}"
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+          git add .
+          git diff --staged --quiet || git commit -m "Update dari perintah: ${{ inputs.command }} [skip ci]"
+          git push
