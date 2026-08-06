@@ -1,1 +1,2 @@
-coba masuk ke halaman login shopify menggunakan browser-use (searching apa itu browser-use) (untuk apikey browser use gunakan api key saya "bu_UhQ7an36lUqTyMLNy8jEMFo1QP2ec1NIpqWs4qV8T0c"), Halaman loginnya itu https://accounts.shopify.com/lookup
+coba masuk ke halaman login shopify menggunakan skill browser-local, Halaman loginnya itu https://accounts.shopify.com/lookup
+jika ada firewall cloudflare maka coba rotasi api, cari teknik di internet cara rotasi api di Linux dan ikuti caranya, atau menggunakan VPN gratis di Linux tanpa login
