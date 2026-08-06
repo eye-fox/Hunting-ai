@@ -1,1 +1,1 @@
-coba masuk ke halaman login shopify menggunakan tools dari https://github.com/seleniumbase/SeleniumBase secara headless, Halaman loginnya itu https://accounts.shopify.com/lookup
+coba masuk ke halaman login shopify menggunakan browser-use (searching apa itu browser-use) (untuk apikey browser use gunakan api key saya "bu_UhQ7an36lUqTyMLNy8jEMFo1QP2ec1NIpqWs4qV8T0c"), Halaman loginnya itu https://accounts.shopify.com/lookup
