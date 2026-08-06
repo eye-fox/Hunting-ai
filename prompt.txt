@@ -20,6 +20,7 @@ yang ditulis sebagai laporan format HackerOne di file .md.
   membaca isi gunakan tree API + raw file. (Klausa clone HANYA
   diizinkan bila secara eksplisit disetujui pemilik program — default
   TIDAK.)
+- git clone diizinkan untuk validasi temuan, git clone hanya pada repo yang didapatkan kerentanan
 - Jangan sentuh produksi Shopify / data merchant / akun user asli.
 - Semua uji live hanya pada instance yang kamu kendalikan sendiri
   (sandbox store, local deployment, staging milikmu).
