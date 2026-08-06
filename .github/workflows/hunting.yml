@@ -12,18 +12,24 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Python dependencies
+      - name: Cache everything
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache
+          key: ${{ runner.os }}-cache-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-cache-
+
+      - name: Install dependencies
         run: |
+          sudo apt update
           sudo apt install -y python3 python3-pip chromium-browser
           pip3 install websocket-client
 
-      - name: Make script executable
-        run: chmod +x mulai.sh
-
       - name: Run tests
-        run: ./mulai.sh
+        run: chmod +x mulai.sh && ./mulai.sh
 
-      - name: upload hasil
+      - name: Upload hasil
         uses: actions/upload-artifact@v4
         with:
           name: hasil_hunting
