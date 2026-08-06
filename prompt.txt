@@ -1,2 +1,1 @@
-coba masuk ke halaman login shopify menggunakan skill browser-local, Halaman loginnya itu https://accounts.shopify.com/lookup
-jika ada firewall cloudflare maka coba rotasi api, cari teknik di internet cara rotasi api di Linux dan ikuti caranya, atau menggunakan VPN gratis di Linux tanpa login
+pilih beberapa repo di https://github.com/Shopify/* cari yang potensial ada bug, temukan bug pada repo tersebut, jangan berhenti jika belum dapat kerentanan, jika dapat tulis pada file .MD sesuai format h1
