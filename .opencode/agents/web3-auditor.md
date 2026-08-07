@@ -6,7 +6,18 @@ tools:
   bash: true
   glob: true
   grep: true
-model: claude-sonnet-4-6
+mode: primary
+model: opencode/laguna-s-2.1-free
+temperature: 0.3
+permission:
+  edit: allow
+  bash: allow
+  read: allow
+  grep: allow
+  glob: allow
+  webfetch: allow
+  websearch: allow
+  task: allow
 ---
 
 # Web3 Auditor Agent
