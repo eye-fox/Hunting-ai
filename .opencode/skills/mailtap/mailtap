@@ -1,0 +1,378 @@
+#!/usr/bin/env python3
+"""mailtap.py — Temporary email automation via mail.tm API."""
+
+import sys, os, json, time, re, argparse
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "venv/lib/python3.13/site-packages"))
+import requests
+import urllib3
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+BASE_URL = "https://api.mail.tm"
+CFG = os.path.expanduser("~/.tempmail")
+API_HEADERS = {"Content-Type": "application/json"}
+REQUESTS_KW = {"verify": False, "timeout": 30}
+
+
+def _normalize_body(val):
+    if isinstance(val, list):
+        return "".join(str(v) for v in val)                       return str(val) if val else ""
+
+def _strip_html(text):
+    text = re.sub(r'<style[^>]*>.*?</style>', '', text, flags=re.DOTALL)
+    text = re.sub(r'<head[^>]*>.*?</head>', '', text, flags=re.DOTALL)
+    text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.DOTALL)
+    text = re.sub(r'<a\s+[^>]*href=["\'](https?://[^"\']+)["\'][^>]*>(.*?)</a>', r'\2 (\1)', text, flags=re.DOTALL)
+    text = re.sub(r'<[^>]+>', '', text)
+    text = re.sub(r'&nbsp;', ' ', text)
+    text = re.sub(r'&amp;', '&', text)
+    text = re.sub(r'&lt;', '<', text)
+    text = re.sub(r'&gt;', '>', text)
+    text = re.sub(r'&quot;', '"', text)
+    text = re.sub(r'&#(\d+);', lambda m: chr(int(m.group(1))), text)
+    text = re.sub(r'\n\s*\n', '\n\n', text)
+    return text.strip()
+
+
+class Message:
+    def __init__(self, raw):
+        self._raw = raw
+        self.id = raw.get("id", "")
+        self.subject = raw.get("subject", "")
+        self.from_addr = raw.get("from", {}).get("address", "") if isinstance(raw.get("from"), dict) else ""
+        self.from_name = raw.get("from", {}).get("name", "") if isinstance(raw.get("from"), dict) else ""
+        self.created_at = raw.get("createdAt", "")
+        self.seen = raw.get("seen", False)
+        self.html = _normalize_body(raw.get("html"))
+        self.text = _normalize_body(raw.get("text"))
+        self._body_loaded = bool(raw.get("html") or raw.get("text"))
+
+    @property
+    def body(self):
+        return self.html or self.text or ""
+
+    @property
+    def text_body(self):
+        return self.text or self.html or ""
+
+    def extract_otp(self, pattern=r"(\d{4,8})"):
+        m = re.search(pattern, self.body)
+        return m.group(1) if m else None
+
+    def extract_links(self):
+        return re.findall(r'href=["\'](https?://[^"\']+)["\']', self.body) or \
+               re.findall(r'(https?://[^\s<>"\'\]\)]+)', self.text_body)
+
+    def __repr__(self):
+        return f"<Message {self.id[:8]} from={self.from_addr} subj={self.subject}>"
+
+
+def _accounts_path():
+    os.makedirs(CFG, exist_ok=True)
+    return os.path.join(CFG, "accounts.json")
+
+def _load_accounts():
+    p = _accounts_path()
+    if os.path.exists(p):
+        try:
+            with open(p) as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return {}
+    return {}
+
+def _save_accounts(accts):
+    with open(_accounts_path(), "w") as f:
+        json.dump(accts, f, indent=2)
+
+def _request_retry(method, url, **kw):
+    for attempt in range(3):
+        try:
+            return requests.request(method, url, **kw)
+        except requests.exceptions.ConnectionError as e:
+            if attempt < 2:
+                time.sleep(2 ** attempt)
+                continue
+            raise
+
+def _refresh_token(account):
+    for attempt in range(3):
+        try:
+            r = _request_retry("POST", f"{BASE_URL}/token",
+                json={"address": account["email"], "password": account["password"]},
+                headers=API_HEADERS, **REQUESTS_KW)
+            break
+        except requests.exceptions.RequestException:
+            if attempt < 2:
+                time.sleep(2)
+                continue
+            return False
+    if r.status_code == 200:
+        account["token"] = r.json()["token"]
+        accts = _load_accounts()
+        aid = account["id"]
+        if aid in accts:
+            accts[aid]["token"] = account["token"]
+            _save_accounts(accts)
+        return True
+    return False
+
+
+class TempMail:
+    def __init__(self, name=None, email=None, password=None, token=None):
+        accts = _load_accounts()
+        if name and name in accts:
+            self._data = accts[name]
+            self._name = name
+        elif email and password:
+            self._data = {"email": email, "password": password, "token": token or ""}
+            self._name = name or email.split("@")[0]
+        else:
+            raise ValueError(f"Akun '{name}' tidak ditemukan. Available: {list(accts.keys())}")
+
+    @classmethod
+    def create(cls, name=None):
+        dr = _request_retry("GET", f"{BASE_URL}/domains", headers=API_HEADERS, **REQUESTS_KW)
+        domains = dr.json().get("hydra:member", [])
+        domain = domains[0]["domain"] if domains else "wshu.net"
+        ts = int(time.time() * 1000)
+        email = f"u{ts}@{domain}"
+        password = "Testing123"
+        r = _request_retry("POST", f"{BASE_URL}/accounts",
+            json={"address": email, "password": password},
+            headers=API_HEADERS, **REQUESTS_KW)
+        if r.status_code != 201:
+            raise RuntimeError(f"Gagal create account: {r.status_code}")
+        data = r.json()
+        email = data["address"]
+        tr = _request_retry("POST", f"{BASE_URL}/token",
+            json={"address": email, "password": password},
+            headers=API_HEADERS, **REQUESTS_KW)
+        token = tr.json().get("token", "") if tr.status_code == 200 else ""
+        alias = name or email.split("@")[0]
+        accts = _load_accounts()
+        accts[alias] = {"id": alias, "email": email, "password": password, "token": token, "created_at": data.get("createdAt", "")}
+        _save_accounts(accts)
+        return cls(alias)
+
+    @property
+    def email(self):
+        return self._data["email"]
+
+    def _request(self, method, path, **kw):
+        headers = kw.pop("headers", {})
+        headers["Authorization"] = f"Bearer {self._data['token']}"
+        opts = {**REQUESTS_KW, **kw}
+        r = _request_retry(method, f"{BASE_URL}{path}", headers=headers, **opts)
+        if r.status_code == 401:
+            if _refresh_token(self._data):
+                headers["Authorization"] = f"Bearer {self._data['token']}"
+                r = _request_retry(method, f"{BASE_URL}{path}", headers=headers, **opts)
+        return r
+
+    def inbox(self, page=1, per_page=20):
+        try:
+            r = self._request("GET", f"/messages?page={page}&itemsPerPage={per_page}")
+        except requests.exceptions.RequestException as e:
+            print(f"! Gagal terhubung ke mail.tm: {e}", file=sys.stderr)
+            return None
+        if r.status_code != 200:
+            print(f"! API error: {r.status_code} {r.text[:200]}", file=sys.stderr)
+            return None
+        data = r.json()
+        return [Message(m) for m in data.get("hydra:member", [])]
+
+    def read(self, msg_id):
+        try:
+            r = self._request("GET", f"/messages/{msg_id}")
+        except requests.exceptions.RequestException as e:
+            print(f"! Gagal terhubung ke mail.tm: {e}", file=sys.stderr)
+            return None
+        if r.status_code != 200:
+            return None
+        return Message(r.json())
+
+    def wait_for(self, subject_contains=None, from_addr=None, timeout=60, interval=3):
+        start = time.time()
+        while time.time() - start < timeout:
+            msgs = self.inbox()
+            if msgs:
+                for m in msgs:
+                    if subject_contains and subject_contains.lower() not in m.subject.lower():
+                        continue
+                    if from_addr and from_addr.lower() not in m.from_addr.lower():
+                        continue
+                    return self.read(m.id)
+            time.sleep(interval)
+        return None
+
+    def wait_for_otp(self, pattern=r"(\d{4,8})", timeout=60):
+        msg = self.wait_for(timeout=timeout)
+        if msg:
+            return msg.extract_otp(pattern)
+        return None
+
+    def wait_for_link(self, timeout=60):
+        msg = self.wait_for(timeout=timeout)
+        if msg:
+            links = msg.extract_links()
+            return links[0] if links else None
+        return None
+
+    def delete(self, msg_id):
+        try:
+            r = self._request("DELETE", f"/messages/{msg_id}")
+        except requests.exceptions.RequestException:
+            return False
+        return r.status_code == 204
+
+    def __repr__(self):
+        return f"<TempMail {self._name}: {self.email}>"
+
+
+def _show_inbox(mail):
+    msgs = mail.inbox()
+    if msgs is None:
+        print("! Gagal fetch inbox", file=sys.stderr)
+        return
+    print(f"\n  Akun: {mail.email}")
+    if not msgs:
+        print("  (inbox kosong)")
+        return
+    print(f"  {'ID':<12} {'From':<35} {'Subject':<50}")
+    print("  " + "-" * 97)
+    for m in msgs:
+        subj = _strip_html(m.subject)[:48] if m.subject else "(no subject)"
+        print(f"  {m.id[:10]:<12} {m.from_addr:<35} {subj:<50}")
+    print(f"\n  Total: {len(msgs)} pesan")
+
+def _show_msg(msg):
+    print(f"\n  {'='*70}")
+    print(f"  Dari    : {msg.from_name} <{msg.from_addr}>")
+    print(f"  Subjek  : {_strip_html(msg.subject) if msg.subject else '(no subject)'}")
+    print(f"  Waktu   : {msg.created_at.replace('T', ' ').split('.')[0]}")
+    print(f"  ID      : {msg.id}")
+    print(f"  {'='*70}")
+    print()
+    body = _strip_html(msg.body) if msg.body else ""
+    if body:
+        print(body[:5000])
+        if len(body) > 5000:
+            print(f"\n  ... (truncated, {len(body)} total chars)")
+    else:
+        print("(tidak ada konten)")
+
+
+def _get_mail(name):
+    try:
+        return TempMail(name)
+    except ValueError as e:
+        print(f"! {e}", file=sys.stderr)
+        sys.exit(1)
+    except requests.exceptions.RequestException as e:
+        print(f"! Gagal terhubung ke mail.tm: {e}", file=sys.stderr)
+        sys.exit(1)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="TempMail CLI - mail.tm email automation")
+    parser.add_argument("--create", "-c", help="Create new account with name")
+    sub = parser.add_subparsers(dest="command")
+
+    p_inbox = sub.add_parser("inbox", help="Show inbox")
+    p_inbox.add_argument("akun", nargs="?", default="shopify_attacker")
+
+    p_read = sub.add_parser("read", help="Read message")
+    p_read.add_argument("akun", nargs="?", default="shopify_attacker")
+    p_read.add_argument("msg_id")
+
+    p_wait = sub.add_parser("wait", help="Wait for new email")
+    p_wait.add_argument("akun", nargs="?", default="shopify_attacker")
+    p_wait.add_argument("--subject", help="Filter by subject")
+    p_wait.add_argument("--from", dest="from_addr", help="Filter by sender")
+    p_wait.add_argument("--timeout", type=int, default=60)
+    p_wait.add_argument("--otp", action="store_true", help="Extract OTP code")
+    p_wait.add_argument("--link", action="store_true", help="Extract verification link")
+    p_wait.add_argument("--json", action="store_true", help="JSON output")
+
+    sub.add_parser("list", help="List all accounts")
+
+    args = parser.parse_args()
+
+    if hasattr(args, 'create') and args.create:
+        try:
+            mail = TempMail.create(args.create)
+        except requests.exceptions.RequestException as e:
+            print(f"! Gagal terhubung ke mail.tm: {e}", file=sys.stderr)
+            sys.exit(1)
+        print(f"Akun {args.create} dibuat: {mail.email}")
+        return
+
+    if args.command == "list" or not args.command:
+        accts = _load_accounts()
+        if not accts:
+            print("Tidak ada akun. Buat dengan: mailtap --create <nama>")
+            return
+        print(f"{'Alias':<12} {'Email':<35} {'Dibuat':<20}")
+        print("-" * 67)
+        for a in accts.values():
+            print(f"{a['id']:<12} {a['email']:<35} {a.get('created_at','?')[:10]:<20}")
+        return
+
+    if args.command == "inbox":
+        mail = _get_mail(args.akun)
+        _show_inbox(mail)
+        return
+
+    if args.command == "read":
+        mail = _get_mail(args.akun)
+        full_id = None
+        for page in range(1, 6):
+            for retry in range(3):
+                msgs = mail.inbox(page=page)
+                if msgs is not None:
+                    break
+                if retry < 2:
+                    time.sleep(2)
+            if msgs is None:
+                break
+            for m in msgs:
+                if m.id.startswith(args.msg_id):
+                    full_id = m.id
+                    break
+            if full_id:
+                break
+        if not full_id:
+            print(f"Message '{args.msg_id}' not found", file=sys.stderr)
+            return
+        msg = mail.read(full_id)
+        if msg:
+            _show_msg(msg)
+        return
+
+    if args.command == "wait":
+        mail = _get_mail(args.akun)
+        msg = mail.wait_for(subject_contains=args.subject, from_addr=args.from_addr, timeout=args.timeout)
+        if args.json:
+            out = {"found": msg is not None}
+            if msg:
+                out.update({"id": msg.id, "subject": msg.subject, "from": msg.from_addr,
+                            "body": _strip_html(msg.body), "otp": msg.extract_otp() if args.otp else None,
+                            "links": msg.extract_links() if args.link else None})
+            print(json.dumps(out))
+        elif msg:
+            if args.otp:
+                print(msg.extract_otp() or "OTP tidak ditemukan")
+            elif args.link:
+                links = msg.extract_links()
+                print(links[0] if links else "Link tidak ditemukan")
+            else:
+                _show_msg(msg)
+        else:
+            print("Timeout, tidak ada email masuk", file=sys.stderr)
+            sys.exit(1)
+        return
+
+if __name__ == "__main__":
+    main()
