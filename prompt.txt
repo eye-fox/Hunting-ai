@@ -1,3 +1,3 @@
 load skill security-audit lalu audit code pada repo github https://github.com/Shopify/shop-chat-agent , temukan kerentanan nyata
 pada saat kerentanan ditemukan langsung baca file WHAT-NOT-TO-REPORT.md untuk memvalidasi temuan itu eligible atau tidak
-kamu harus jujur apa adanya.
+kamu harus jujur apa adanya
