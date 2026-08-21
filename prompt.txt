@@ -39,9 +39,7 @@ per subagent) dengan instruksi:
       di registry (npm audit data via registry API bila tersedia).
    e) Output ringkas: stack | endpoint | auth model | data flow.
 
-==================================================================
 # 2. FASE HUNTING KELAS VULN (prioritas dari intel sebelumnya)
-==================================================================
 
 # 2A. shop-chat-agent (P1 — prioritas #1)
 Subagent bug-hunter-sub + general, mode "2-account differential":
@@ -128,9 +126,7 @@ Subagent:
 Subagent ringan: cek state validation path & provider_ignores_state;
 ghostferry: HTTP control server auth (lookup & bypass).
 
-==================================================================
 # 3. FASE VALIDASI (GATE 7-PERTANYAAN — wajib per temuan)
-==================================================================
 1. Bisa direproduksi (step-by-step)? 2. Impact riil nyata (bukan
 teori)? 3. In-scope program? 4. Bukan N/A (mis. by-design/low)?
 5. Impact ke data/user lain? 6. Baru & berharga? 7. Tidak melewati
