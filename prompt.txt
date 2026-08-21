@@ -12,9 +12,7 @@ potensial. Ikuti semua fase di bawah secara berurutan. JANGAN BERHENTI
 sebelum menghasilkan minimal SATU kerentanan TERVALIDASI + TEREPRODUKSI
 yang ditulis sebagai laporan format HackerOne di file .md.
 
-==================================================================
 # 0. ATURAN DASAR
-==================================================================
 - Sumber: GitHub REST API (api.github.com), raw.githubusercontent.com,
   registry (npm/Gem/PyPI), dan situs/endpoint LIVE dari instalasi
   produk (bila izin aktif testing tersedia & jelas in-scope).
@@ -27,9 +25,7 @@ yang ditulis sebagai laporan format HackerOne di file .md.
   (sandbox store, local deployment, staging milikmu).
 - Gunakan subagent untuk paralelisasi. Log semua request keluar.
 
-==================================================================
 # 1. FASE RECON TEKNIS (per repo target)
-==================================================================
 Untuk TIAP repo: jalankan subagent explore/general paralel (2-3 repo
 per subagent) dengan instruksi:
    a) GET /repos/Shopify/<repo>/git/trees/<branch>?recursive=1 → simpan
