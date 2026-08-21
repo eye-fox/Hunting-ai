@@ -26,7 +26,7 @@ jobs:
         run: |
           curl -fsSL https://opencode.ai/install | bash
           PROMPT=$(cat prompt.txt)
-          ~/.opencode/bin/opencode run "$PROMPT" -m opencode/nemotron-3.5-lightning-free --auto
+          ~/.opencode/bin/opencode run "$PROMPT" -m opencode/x-preview-f-free --auto
 
       - name: Upload hasil
         uses: actions/upload-artifact@v4
