@@ -2,7 +2,7 @@
 name: web3-auditor
 description: Smart contract security auditor. Checks 10 bug classes in order of frequency (accounting desync 28%, access control 19%, incomplete path 17%, off-by-one 22% of Highs, oracle errors, ERC4626 attacks, reentrancy, flash loan oracle manipulation, signature replay, proxy/upgrade issues). Applies pre-dive kill signals first. Use for any Solidity/Rust contract audit or to check if a DeFi target is worth hunting.
 mode: primary
-model: opencode/laguna-s-2.1-free
+model: opencode/x-preview-f-free
 temperature: 0.3
 permission:
   edit: allow
