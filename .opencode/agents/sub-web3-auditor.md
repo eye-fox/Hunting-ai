@@ -7,7 +7,7 @@ tools:
   glob: true
   grep: true
 mode: subagent
-model: opencode/laguna-s-2.1-free
+model: opencode/x-preview-f-free
 temperature: 0.3
 permission:
   edit: allow
