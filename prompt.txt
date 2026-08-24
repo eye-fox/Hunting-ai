@@ -1,1 +1,2 @@
 promt sesungguhnya itu ada di file prompts.txt
+baca file itu sebagai prompt untuk anda
